@@ -1,0 +1,26 @@
+[
+  {
+    "id": "preempt_distraction",
+    "condition": {
+      "engagement_slope_lt": -0.2,
+      "cognitive_switch_rate_gt_percentile": 75
+    },
+    "action": {
+      "type": "micro_intervention",
+      "payload": {"type":"motor_break","duration_sec":45,"content":"dance_with_character"}
+    },
+    "priority": 10
+  },
+  {
+    "id": "scaffold_on_frustration",
+    "condition": {
+      "consecutive_wrong": 3,
+      "decreasing_time_to_answer": true
+    },
+    "action": {
+      "type": "scaffold",
+      "payload": {"level":"simplify","voice":"You got this! Let's do it step by step."}
+    },
+    "priority": 9
+  }
+]
