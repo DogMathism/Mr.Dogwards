@@ -35,7 +35,7 @@ server.on('upgrade', (request, socket, head) => {
 // POST /api/events/batch
 app.post('/api/events/batch', async (req, res) => {
   const events = req.body.events || [];
-  const user_id = req.headers['x-user-id']  req.body.user_id  uuidv4();
+  const user_id = req.headers['x-user-id'] || req.body.user_id || uuidv4();
   try {
     const queries = events.map(e => {
       const id = uuidv4();
