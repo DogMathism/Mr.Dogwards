@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Adaptive MVP Demo</title>
+  <style>
+    body{font-family: Arial; padding:20px}
+    #task {margin-bottom: 12px;}
+    #log {white-space:pre-wrap; background:#f1f1f1; padding:10px; height:200px; overflow:auto}
+  </style>
+</head>
+<body>
+  <h2>Adaptive MVP — demo task</h2>
+  <div id="task">
+    <div id="question">Сколько будет 7 + 5?</div>
+    <input id="answer" />
+    <button id="submit">Отправить</button>
+  </div>
+
+  <div>
+    <button id="startws">Connect WS</button>
+    <button id="reg">Register User</button>
+    <input id="userid" placeholder="user id (uuid)" />
+  </div>
+
+  <h3>Log</h3>
+  <div id="log"></div>
+
+  <script src="./telemetry.js"></script>
+  <script>
+    const userIdInput = document.getElementById('userid');
+    const logEl = document.getElementById('log');
+    const addLog = txt => { logEl.textContent = (new Date().toISOString()) + ' — ' + txt + '\n' + logEl.textContent };
+
+    const wsBtn = document.getElementById('startws');
+    let ws;
+    wsBtn.onclick = () => {
+      ws = new WebSocket('ws://' + location.hostname + ':3000');
+      ws.onopen = () => addLog('WS open');
+      ws.onmessage = (m) => {
+        addLog('WS: ' + m.data);
+        try {
+          const p = JSON.parse(m.data);
+          if (p.type === 'action') {
+            // act on action: show alert or simple animation
+            addLog('Action received: ' + JSON.stringify(p.data));
+            if (p.data && p.data.action && p.data.action.payload && p.data.action.payload.type === 'motor_break') {
+              alert('Micro-break: dance for ' + p.data.action.payload.duration_sec + ' sec!');
+            } else {
+              alert('Action: ' + JSON.stringify(p.data));
+            }
+          }
+        } catch (e) {}
+      };
+      ws.onclose = () => addLog('WS closed');
+    };
+
+    document.getElementById('reg').onclick = () => {
+      const uid = userIdInput.value || '00000000-0000-0000-0000-000000000001';
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({type:'register', user_id: uid}));
+        addLog('registered ws for ' + uid);
+      } else {
+        addLog('ws not open');
+      }
+    };
+
+    // simple task handlers
+    const submitBtn = document.getElementById('submit');
+    submitBtn.onclick = () => {
+      const ans = document.getElementById('answer').value;
+      const correct = (String(ans).trim() === '12');
+      Telemetry.pushEvent('answer_submit', {questionId: 'q1', response: ans, timeToAnswer: Telemetry.getQuestionTime(), correct});
+      addLog('answer submitted: ' + ans + ' correct: ' + correct);
+      document.getElementById('answer').value = '';
+      Telemetry.resetQuestionTime();
+    };
+  </script>
+</body>
+</html>
