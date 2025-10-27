@@ -41,7 +41,7 @@ app.post('/api/events/batch', async (req, res) => {
       const id = uuidv4();
       const session_id = e.session_id || null;
       const event_type = e.type || e.event_type;
-      const payload = e.payload  e.event_payload  {};
+      const payload = e.payload || e.event_payload || {};
       const ts = e.ts || new Date().toISOString();
       return db.query(
         'INSERT INTO raw_events (id,user_id,session_id,event_type,event_payload,ts) VALUES ($1,$2,$3,$4,$5,$6)',
