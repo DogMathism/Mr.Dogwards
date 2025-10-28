@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   db:
     image: postgres:15
@@ -20,8 +21,12 @@ services:
       DATABASE_URL: postgres://postgres:postgres@db:5432/adaptive
     ports:
       - "3000:3000"
+    # 🔧 Основная правка: не затираем node_modules при монтировании
     volumes:
       - ./backend:/app
+      - /app/node_modules
+    # 🧠 Можно добавить авто-рестарт при падении (удобно на проде)
+    restart: unless-stopped
 
 volumes:
   db-data:
