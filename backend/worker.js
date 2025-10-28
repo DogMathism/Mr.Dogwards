@@ -7,9 +7,12 @@ const WINDOW_SEC = 20; // window size for feature aggregation
 
 async function computeForAllActiveUsers() {
   // Simplified: get distinct user_ids with events in last WINDOW_SEC*2
-  const { rows: users } = await db.query(
-    SELECT DISTINCT user_id FROM raw_events WHERE ts >= now() - interval '${WINDOW_SEC*2} seconds'
-  );
+  const { rows: users } = await db.query(`
+  SELECT DISTINCT user_id 
+  FROM raw_events 
+  WHERE ts >= now() - interval '${WINDOW_SEC*2} seconds'
+`);
+
   for (const u of users) {
     const userId = u.user_id;
     const windowStart = new Date(Date.now() - WINDOW_SEC*1000).toISOString();
