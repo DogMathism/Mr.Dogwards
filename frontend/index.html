@@ -1,80 +1,174 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <title>Adaptive MVP Demo</title>
+  <meta charset="UTF-8" />
+  <title>🐶 Mr.Dogwards — Cognitive Dashboard</title>
   <style>
-    body{font-family: Arial; padding:20px}
-    #task {margin-bottom: 12px;}
-    #log {white-space:pre-wrap; background:#f1f1f1; padding:10px; height:200px; overflow:auto}
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #303f9f;
+      color: white;
+      padding: 15px 25px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    main {
+      padding: 25px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    #chart {
+      width: 100%;
+      height: 300px;
+    }
+    button {
+      background: #303f9f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #3f51b5;
+    }
+    #log {
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 13px;
+      background: #fafafa;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #eee;
+    }
+    .metric {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .metric span {
+      font-weight: bold;
+      color: #303f9f;
+    }
   </style>
 </head>
 <body>
-  <h2>Adaptive MVP — demo task</h2>
-  <div id="task">
-    <div id="question">Сколько будет 7 + 5?</div>
-    <input id="answer" />
-    <button id="submit">Отправить</button>
-  </div>
+  <header>🐶 Mr.Dogwards Cognitive Dashboard</header>
 
-  <div>
-    <button id="startws">Connect WS</button>
-    <button id="reg">Register User</button>
-    <input id="userid" placeholder="user id (uuid)" />
-  </div>
+  <main>
+    <div class="card">
+      <h2>📊 Метрики внимания</h2>
+      <div class="metric">Внимание: <span id="attn">–</span></div>
+      <div class="metric">Вовлечённость: <span id="eng">–</span></div>
+      <div class="metric">Переключаемость: <span id="cog">–</span></div>
+      <div class="metric">Ошибки: <span id="err">–</span></div>
+      <canvas id="chart"></canvas>
+      <button id="send">Отправить тестовые события</button>
+    </div>
 
-  <h3>Log</h3>
-  <div id="log"></div>
+    <div class="card">
+      <h2>⚡ Журнал действий</h2>
+      <div id="log"></div>
+    </div>
+  </main>
 
-  <script src="./telemetry.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const userIdInput = document.getElementById('userid');
-    const logEl = document.getElementById('log');
-    const addLog = txt => { logEl.textContent = (new Date().toISOString()) + ' — ' + txt + '\n' + logEl.textContent };
+    const userId = 'test123';
+    const logBox = document.getElementById('log');
+    const attn = document.getElementById('attn');
+    const eng = document.getElementById('eng');
+    const cog = document.getElementById('cog');
+    const err = document.getElementById('err');
 
-    const wsBtn = document.getElementById('startws');
-    let ws;
-    wsBtn.onclick = () => {
-      ws = new WebSocket('ws://' + location.hostname + ':3000');
-      ws.onopen = () => addLog('WS open');
-      ws.onmessage = (m) => {
-        addLog('WS: ' + m.data);
-        try {
-          const p = JSON.parse(m.data);
-          if (p.type === 'action') {
-            // act on action: show alert or simple animation
-            addLog('Action received: ' + JSON.stringify(p.data));
-            if (p.data && p.data.action && p.data.action.payload && p.data.action.payload.type === 'motor_break') {
-              alert('Micro-break: dance for ' + p.data.action.payload.duration_sec + ' sec!');
-            } else {
-              alert('Action: ' + JSON.stringify(p.data));
-            }
-          }
-        } catch (e) {}
-      };
-      ws.onclose = () => addLog('WS closed');
+    const log = (msg) => {
+      const div = document.createElement('div');
+      div.textContent = ${new Date().toLocaleTimeString()} — ${msg};
+      logBox.appendChild(div);
+      logBox.scrollTop = logBox.scrollHeight;
     };
 
-    document.getElementById('reg').onclick = () => {
-      const uid = userIdInput.value || '00000000-0000-0000-0000-000000000001';
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({type:'register', user_id: uid}));
-        addLog('registered ws for ' + uid);
-      } else {
-        addLog('ws not open');
+    // График внимания
+    const ctx = document.getElementById('chart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Attention Span Index',
+          data: [],
+          borderColor: '#303f9f',
+          fill: false,
+          tension: 0.2
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+
+    // WebSocket подключение
+    const ws = new WebSocket(`ws://${location.hostname}:3000`);
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'register', user_id: userId }));
+      log('✅ WebSocket подключен');
+    };
+    ws.onmessage = (msg) => {
+      const data = JSON.parse(msg.data);
+      if (data.type === 'action') {
+        log(`⚡ Рекомендация: ${JSON.stringify(data.data)}`);
       }
     };
 
-    // simple task handlers
-    const submitBtn = document.getElementById('submit');
-    submitBtn.onclick = () => {
-      const ans = document.getElementById('answer').value;
-      const correct = (String(ans).trim() === '12');
-      Telemetry.pushEvent('answer_submit', {questionId: 'q1', response: ans, timeToAnswer: Telemetry.getQuestionTime(), correct});
-      addLog('answer submitted: ' + ans + ' correct: ' + correct);
-      document.getElementById('answer').value = '';
-      Telemetry.resetQuestionTime();
+    // Отправка тестовых событий
+    document.getElementById('send').onclick = async () => {
+      log('📤 Отправка тестовых событий...');
+      const events = [
+        { type: 'click', payload: { target: 'start_button' } },
+        { type: 'keypress', payload: { key: 'A' } },
+        { type: 'answer_submit', payload: { correct: Math.random()>0.5, timeToAnswer: Math.random()*4000+1000 } },
+        { type: 'cursor_move' }
+      ];
+      await fetch('/api/events/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, events })
+      });
+      log('✅ События записаны');
     };
+
+    // Обновление метрик из БД (polling)
+    async function updateMetrics() {
+
+
+const res = await fetch(`/api/actions/poll?user_id=${userId}`);
+      const data = await res.json();
+
+      // Просто фейковое обновление значений для визуала
+      attn.textContent = (Math.random() * 100).toFixed(1);
+      eng.textContent = (Math.random() * 100).toFixed(1);
+      cog.textContent = (Math.random() * 100).toFixed(1);
+      err.textContent = (Math.random() * 100).toFixed(1);
+
+      chart.data.labels.push(new Date().toLocaleTimeString());
+      chart.data.datasets[0].data.push(parseFloat(attn.textContent));
+      if (chart.data.labels.length > 15) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+      }
+      chart.update();
+    }
+    setInterval(updateMetrics, 5000);
   </script>
 </body>
 </html>
