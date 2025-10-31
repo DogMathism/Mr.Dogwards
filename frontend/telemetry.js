@@ -1,4 +1,4 @@
-/ telemetry.js - minimal telemetry collector
+// telemetry.js - minimal telemetry collector
 const Telemetry = (function(){
   const buffer = [];
   const BATCH_MS = 15000;
