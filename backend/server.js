@@ -82,6 +82,28 @@ async function waitForDB(maxAttempts = 20, delay = 2000) {
   throw new Error('Database connection failed after multiple attempts');
 }
 
+// GET /api/metrics?user_id=...
+app.get('/api/metrics', async (req, res) => {
+  const user_id = req.query.user_id;
+  if (!user_id) return res.status(400).json({ error: 'user_id required' });
+
+  try {
+    const { rows } = await db.query(
+      `SELECT window_end, attention_span_index, engagement_slope, cognitive_switch_rate, error_consistency_score
+       FROM feature_windows
+       WHERE user_id = $1
+       ORDER BY window_end DESC
+       LIMIT 10`,
+      [user_id]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error('metrics error:', err);
+    res.status(500).json({ error: 'db query failed' });
+  }
+});
+
 app.use(express.static('frontend'));
 
 // Основной запуск приложения
