@@ -82,6 +82,8 @@ async function waitForDB(maxAttempts = 20, delay = 2000) {
   throw new Error('Database connection failed after multiple attempts');
 }
 
+app.use(express.static('frontend'));
+
 // Основной запуск приложения
 server.listen(3000, async () => {
   console.log('🌐 Server running on :3000');
