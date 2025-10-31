@@ -103,20 +103,55 @@
     // График внимания
     const ctx = document.getElementById('chart').getContext('2d');
     const chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Attention Span Index',
-          data: [],
-          borderColor: '#303f9f',
-          fill: false,
-          tension: 0.2
-        }]
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      {
+        label: 'Attention Span Index',
+        data: [],
+        borderWidth: 2,
+        borderColor: 'rgba(255, 99, 132, 0.8)',
       },
-      options: { scales: { y: { beginAtZero: true } } }
-    });
-
+      {
+        label: 'Engagement Slope',
+        data: [],
+        borderWidth: 2,
+        borderColor: 'rgba(54, 162, 235, 0.8)',
+      },
+      {
+        label: 'Cognitive Switch Rate',
+        data: [],
+        borderWidth: 2,
+        borderColor: 'rgba(255, 206, 86, 0.8)',
+      },
+      {
+        label: 'Error Consistency Score',
+        data: [],
+        borderWidth: 2,
+        borderColor: 'rgba(75, 192, 192, 0.8)',
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    animation: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Value' }
+      },
+      x: {
+        title: { display: true, text: 'Time' }
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'bottom'
+      }
+    }
+  }
+});
     // WebSocket подключение
     const ws = new WebSocket(`ws://${location.hostname}:3000`);
     ws.onopen = () => {
@@ -149,25 +184,32 @@
 
     // Обновление метрик из БД (polling)
     async function updateMetrics() {
+  const res = await fetch(`/api/metrics?user_id=${userId}`);
+  const data = await res.json();
+  if (!data.length) return;
 
+  const latest = data[0];
+  attn.textContent = latest.attention_span_index?.toFixed(2) ?? '-';
+  eng.textContent = latest.engagement_slope?.toFixed(2) ?? '-';
+  cog.textContent = latest.cognitive_switch_rate?.toFixed(2) ?? '-';
+  err.textContent = latest.error_consistency_score?.toFixed(2) ?? '-';
 
-const res = await fetch(`/api/actions/poll?user_id=${userId}`);
-      const data = await res.json();
+  const tsLabel = new Date(latest.window_end).toLocaleTimeString();
+  chart.data.labels.push(tsLabel);
 
-      // Просто фейковое обновление значений для визуала
-      attn.textContent = (Math.random() * 100).toFixed(1);
-      eng.textContent = (Math.random() * 100).toFixed(1);
-      cog.textContent = (Math.random() * 100).toFixed(1);
-      err.textContent = (Math.random() * 100).toFixed(1);
+  chart.data.datasets[0].data.push(latest.attention_span_index);
+  chart.data.datasets[1].data.push(latest.engagement_slope);
+  chart.data.datasets[2].data.push(latest.cognitive_switch_rate);
+  chart.data.datasets[3].data.push(latest.error_consistency_score);
 
-      chart.data.labels.push(new Date().toLocaleTimeString());
-      chart.data.datasets[0].data.push(parseFloat(attn.textContent));
-      if (chart.data.labels.length > 15) {
-        chart.data.labels.shift();
-        chart.data.datasets[0].data.shift();
-      }
-      chart.update();
-    }
+  // ограничиваем длину графика
+  if (chart.data.labels.length > 15) {
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(d => d.data.shift());
+  }
+
+  chart.update();
+}
     setInterval(updateMetrics, 5000);
   </script>
 </body>
